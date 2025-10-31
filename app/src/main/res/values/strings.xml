@@ -3,4 +3,7 @@
     <string name="reward_title">Unlock this feature by watching ads</string>
     <string name="video_starting_in_text">Video starting in %d…</string>
     <string name="negative_button_text">No, thanks</string>
+    <string name="earned_count">Earned: %d</string>
+    <string name="open_interstitial_ad">Open Interstitial Ad</string>
+    <string name="open_rewarded_interstitial_ad">Open Rewarded Interstitial Ad</string>
 </resources>
