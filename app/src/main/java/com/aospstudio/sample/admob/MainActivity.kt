@@ -204,13 +204,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                addCoins(OVER_REWARD)
-
                 if (rewardedInterstitialAd == null) {
                     return
                 }
 
-                val rewardAmount = rewardedInterstitialAd!!.rewardItem.amount
+                val rewardAmount = OVER_REWARD
                 val rewardType = rewardedInterstitialAd!!.rewardItem.type
                 introduceVideoAd(rewardAmount, rewardType)
             }
@@ -254,8 +252,8 @@ class MainActivity : AppCompatActivity() {
 
         rewardedInterstitialAd?.show(
             this
-        ) { rewardItem ->
-            addCoins(rewardItem.amount)
+        ) { _ ->
+            addCoins(OVER_REWARD)
         }
     }
 
