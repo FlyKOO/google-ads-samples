@@ -4,8 +4,17 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.view.View
-import android.widget.TextView
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import com.aospstudio.sample.admob.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -16,17 +25,24 @@ class AdDialogFragment : DialogFragment() {
 
     private var listener: AdDialogInteractionListener? = null
     private var countDownTimer: CountDownTimer? = null
-    private var timeRemaining: Long = 0
+    private val timeRemainingState = mutableStateOf(AD_COUNTER_TIME)
 
     fun setAdDialogInteractionListener(listener: AdDialogInteractionListener) {
         this.listener = listener
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val view: View = requireActivity().layoutInflater.inflate(R.layout.widget_dialog_ad, null)
+        val composeView = ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MaterialTheme {
+                    AdDialogContent(timeRemainingState.value)
+                }
+            }
+        }
 
         val builder = MaterialAlertDialogBuilder(this.requireActivity())
-        builder.setView(view)
+        builder.setView(composeView)
 
         val args = arguments
         var rewardAmount = -1
@@ -43,25 +59,24 @@ class AdDialogFragment : DialogFragment() {
             getString(R.string.negative_button_text)
         ) { _, _ -> dialog?.cancel() }
         val dialog: Dialog = builder.create()
-        createTimer(AD_COUNTER_TIME, view)
+        createTimer(AD_COUNTER_TIME)
         return dialog
     }
 
-    private fun createTimer(time: Long, dialogView: View) {
-        val textView: TextView = dialogView.findViewById(R.id.timer)
+    private fun createTimer(time: Long) {
+        timeRemainingState.value = time
+        countDownTimer?.cancel()
+
         countDownTimer = object : CountDownTimer(time * 1000, 50) {
             override fun onTick(millisUnitFinished: Long) {
-                timeRemaining = millisUnitFinished / 1000 + 1
-                textView.text =
-                    String.format(getString(R.string.video_starting_in_text), timeRemaining)
+                val timeRemaining = millisUnitFinished / 1000 + 1
+                timeRemainingState.value = timeRemaining
             }
 
             override fun onFinish() {
                 dialog?.dismiss()
 
-                if (listener != null) {
-                    listener!!.onShowAd()
-                }
+                listener?.onShowAd()
             }
         }
         countDownTimer?.start()
@@ -69,9 +84,7 @@ class AdDialogFragment : DialogFragment() {
 
     override fun onCancel(dialog: DialogInterface) {
         super.onCancel(dialog)
-        if (listener != null) {
-            listener!!.onCancelAd()
-        }
+        listener?.onCancelAd()
     }
 
     override fun onDestroy() {
@@ -99,4 +112,15 @@ class AdDialogFragment : DialogFragment() {
             return fragment
         }
     }
+}
+
+@Composable
+private fun AdDialogContent(timeRemaining: Long) {
+    Text(
+        text = stringResource(R.string.video_starting_in_text, timeRemaining),
+        style = MaterialTheme.typography.body1,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp)
+    )
 }

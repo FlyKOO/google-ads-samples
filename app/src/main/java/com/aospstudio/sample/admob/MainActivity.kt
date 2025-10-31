@@ -1,17 +1,34 @@
 package com.aospstudio.sample.admob
 
-import android.content.Context
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.util.DisplayMetrics
-import android.view.View
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.Button
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.aospstudio.sample.admob.ads.AdDialogFragment
 import com.aospstudio.sample.admob.ads.AdUnitId
-import com.aospstudio.sample.admob.databinding.ActivityMainBinding
 import com.aospstudio.sample.admob.network.NetworkMonitorUtil
 import com.google.ads.mediation.admob.AdMobAdapter
-import com.google.android.gms.ads.*
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
@@ -26,63 +43,45 @@ private const val OVER_REWARD = 1
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
-    private val context: Context = this
-    private val networkMonitor = NetworkMonitorUtil(context)
+    private lateinit var networkMonitor: NetworkMonitorUtil
     private var consentInformation: ConsentInformation? = null
     private var consentForm: ConsentForm? = null
-    private var initialLayoutComplete = false
     private var mAdIsLoading: Boolean = false
-    private lateinit var adView: AdView
     private var interstitialAd: InterstitialAd? = null
     private var coinCount: Int = 0
     private var countDownTimer: CountDownTimer? = null
     private var isLoadingAds = false
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
-    private var timeRemaining: Long = 0L
-
-    private val adSize: AdSize
-        get() {
-            val display = windowManager.defaultDisplay
-            val outMetrics = DisplayMetrics()
-            display.getMetrics(outMetrics)
-
-            val density = outMetrics.density
-
-            var adWidthPixels = binding.adviewLayout.width.toFloat()
-            if (adWidthPixels == 0f) {
-                adWidthPixels = outMetrics.widthPixels.toFloat()
-            }
-
-            val adWidth = (adWidthPixels / density).toInt()
-            return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
-                context,
-                adWidth
-            )
-        }
+    private val coinCountState = mutableStateOf(0)
+    private val isBannerVisible = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+
+        networkMonitor = NetworkMonitorUtil(this)
+
+        setContent {
+            MaterialTheme {
+                MainScreen(
+                    earnedCoins = coinCountState.value,
+                    onOpenInterstitial = { initLoadInterstitial() },
+                    onOpenRewardedInterstitial = { createTimer(COUNTER_TIME) },
+                    showBanner = isBannerVisible.value
+                )
+            }
+        }
 
         networkMonitor.result = { isAvailable, _ ->
             runOnUiThread {
-                when (isAvailable) {
-                    true -> {
-                        MobileAds.initialize(context) { }
-                        initConsentForm()
-                        initBanner()
-                        initStartApp()
-                        if (rewardedInterstitialAd == null && !isLoadingAds) {
-                            initLoadRewardedInterstitialAd()
-                        }
-                        binding.adviewLayout.visibility = View.VISIBLE
-                    }
-                    false -> {
-                        binding.adviewLayout.visibility = View.GONE
+                if (isAvailable) {
+                    MobileAds.initialize(this) { }
+                    initConsentForm()
+                    initStartApp()
+                    if (rewardedInterstitialAd == null && !isLoadingAds) {
+                        initLoadRewardedInterstitialAd()
                     }
                 }
+                isBannerVisible.value = isAvailable
             }
         }
 
@@ -92,10 +91,6 @@ class MainActivity : AppCompatActivity() {
         AdRequest.Builder()
             .addNetworkExtrasBundle(AdMobAdapter::class.java, extras)
             .build()
-
-        binding.interstitialOpen.setOnClickListener { initLoadInterstitial() }
-
-        binding.interstitialRewardsOpen.setOnClickListener { createTimer(COUNTER_TIME) }
     }
 
     private fun initConsentForm() {
@@ -124,24 +119,10 @@ class MainActivity : AppCompatActivity() {
         }) {}
     }
 
-    private fun initBanner() {
-        adView = AdView(context)
-        binding.adviewLayout.addView(adView)
-        binding.adviewLayout.viewTreeObserver.addOnGlobalLayoutListener {
-            if (!initialLayoutComplete) {
-                initialLayoutComplete = true
-                adView.adUnitId = AdUnitId.BANNER_AD_UNIT_ID
-                adView.adSize = adSize
-                val adRequest = AdRequest.Builder().build()
-                adView.loadAd(adRequest)
-            }
-        }
-    }
-
     private fun initInterstitial() {
         val adRequest = AdRequest.Builder().build()
         InterstitialAd.load(
-            context, AdUnitId.INTERSTITIAL_AD_UNIT_ID, adRequest,
+            this, AdUnitId.INTERSTITIAL_AD_UNIT_ID, adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     interstitialAd = null
@@ -190,7 +171,7 @@ class MainActivity : AppCompatActivity() {
             val adRequest = AdRequest.Builder().build()
 
             RewardedInterstitialAd.load(
-                context,
+                this,
                 AdUnitId.REWARD_AD_UNIT_ID,
                 adRequest,
                 object : RewardedInterstitialAdLoadCallback() {
@@ -212,6 +193,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun addCoins(coins: Int) {
         coinCount += coins
+        coinCountState.value = coinCount
     }
 
     private fun createTimer(time: Long) {
@@ -219,7 +201,6 @@ class MainActivity : AppCompatActivity() {
 
         countDownTimer = object : CountDownTimer(time * 1000, 50) {
             override fun onTick(millisUnitFinished: Long) {
-                timeRemaining = millisUnitFinished / 1000 + 1
             }
 
             override fun onFinish() {
@@ -275,19 +256,79 @@ class MainActivity : AppCompatActivity() {
             this
         ) { rewardItem ->
             addCoins(rewardItem.amount)
-            binding.count.text = "Earned: 1"
         }
     }
 
-    @Override
     override fun onResume() {
         networkMonitor.register()
         super.onResume()
     }
 
-    @Override
     override fun onPause() {
         networkMonitor.unregister()
         super.onPause()
     }
+}
+
+@Composable
+private fun MainScreen(
+    earnedCoins: Int,
+    onOpenInterstitial: () -> Unit,
+    onOpenRewardedInterstitial: () -> Unit,
+    showBanner: Boolean
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(onClick = onOpenInterstitial) {
+            Text(text = stringResource(R.string.open_interstitial_ad))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onOpenRewardedInterstitial) {
+            Text(text = stringResource(R.string.open_rewarded_interstitial_ad))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.earned_count, earnedCoins),
+            style = MaterialTheme.typography.body1
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        if (showBanner) {
+            BannerAd(
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun BannerAd(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val adWidth = configuration.screenWidthDp
+    val adSize = remember(configuration.screenWidthDp) {
+        AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth)
+    }
+    val adRequest = remember { AdRequest.Builder().build() }
+
+    AndroidView(
+        modifier = modifier,
+        factory = {
+            AdView(context).apply {
+                adUnitId = AdUnitId.BANNER_AD_UNIT_ID
+                setAdSize(adSize)
+                loadAd(adRequest)
+            }
+        },
+        update = { view ->
+            if (view.adSize != adSize) {
+                view.setAdSize(adSize)
+                view.loadAd(adRequest)
+            }
+        }
+    )
 }
