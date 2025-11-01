@@ -1,7 +1,6 @@
 package com.aospstudio.sample.admob
 
 import android.os.Bundle
-import android.os.CountDownTimer
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.aospstudio.sample.admob.ads.AdDialogFragment
 import com.aospstudio.sample.admob.ads.AdUnitId
 import com.aospstudio.sample.admob.ads.NativeAdCard
 import com.aospstudio.sample.admob.ads.NativeAdListItem
@@ -43,7 +41,6 @@ import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 
-private const val COUNTER_TIME = 0L
 private const val OVER_REWARD = 1
 
 class MainActivity : AppCompatActivity() {
@@ -54,9 +51,10 @@ class MainActivity : AppCompatActivity() {
     private var mAdIsLoading: Boolean = false
     private var interstitialAd: InterstitialAd? = null
     private var coinCount: Int = 0
-    private var countDownTimer: CountDownTimer? = null
     private var isLoadingAds = false
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
+    private var showRewardedAfterLoad = false
+    private var showInterstitialAfterLoad = false
     private val coinCountState = mutableStateOf(0)
     private val isBannerVisible = mutableStateOf(false)
 
@@ -70,7 +68,7 @@ class MainActivity : AppCompatActivity() {
                 MainScreen(
                     earnedCoins = coinCountState.value,
                     onOpenInterstitial = { initLoadInterstitial() },
-                    onOpenRewardedInterstitial = { createTimer(COUNTER_TIME) },
+                    onOpenRewardedInterstitial = { showRewardedVideo() },
                     showBanner = isBannerVisible.value
                 )
             }
@@ -132,35 +130,31 @@ class MainActivity : AppCompatActivity() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     interstitialAd = null
                     mAdIsLoading = false
+                    showInterstitialAfterLoad = false
                 }
 
                 override fun onAdLoaded(mInterstitialAd: InterstitialAd) {
                     interstitialAd = mInterstitialAd
                     mAdIsLoading = false
+                    if (showInterstitialAfterLoad) {
+                        showInterstitialAfterLoad = false
+                        displayInterstitialAd(mInterstitialAd)
+                    }
                 }
             }
         )
     }
 
     private fun initLoadInterstitial() {
-        if (interstitialAd != null) {
-            interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
-                override fun onAdDismissedFullScreenContent() {
-                    interstitialAd = null
-                    initInterstitial()
-                }
-
-                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                    interstitialAd = null
-                }
-
-                override fun onAdShowedFullScreenContent() {
-                }
-            }
-            interstitialAd?.show(this)
-        } else {
-            initStartApp()
+        val ad = interstitialAd
+        if (ad != null) {
+            showInterstitialAfterLoad = false
+            displayInterstitialAd(ad)
+            return
         }
+
+        showInterstitialAfterLoad = true
+        initStartApp()
     }
 
     private fun initStartApp() {
@@ -168,6 +162,26 @@ class MainActivity : AppCompatActivity() {
             mAdIsLoading = true
             initInterstitial()
         }
+    }
+
+    private fun displayInterstitialAd(ad: InterstitialAd) {
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+            override fun onAdDismissedFullScreenContent() {
+                interstitialAd = null
+                initStartApp()
+            }
+
+            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                interstitialAd = null
+                initStartApp()
+            }
+
+            override fun onAdShowedFullScreenContent() {
+            }
+        }
+
+        interstitialAd = null
+        ad.show(this)
     }
 
     private fun initLoadRewardedInterstitialAd() {
@@ -184,13 +198,17 @@ class MainActivity : AppCompatActivity() {
                         super.onAdFailedToLoad(adError)
                         isLoadingAds = false
                         rewardedInterstitialAd = null
-                        createTimer(COUNTER_TIME)
+                        showRewardedAfterLoad = false
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedInterstitialAd) {
                         super.onAdLoaded(rewardedAd)
                         rewardedInterstitialAd = rewardedAd
                         isLoadingAds = false
+                        if (showRewardedAfterLoad) {
+                            showRewardedAfterLoad = false
+                            displayRewardedAd(rewardedAd)
+                        }
                     }
                 })
         }
@@ -201,47 +219,22 @@ class MainActivity : AppCompatActivity() {
         coinCountState.value = coinCount
     }
 
-    private fun createTimer(time: Long) {
-        countDownTimer?.cancel()
-
-        countDownTimer = object : CountDownTimer(time * 1000, 50) {
-            override fun onTick(millisUnitFinished: Long) {
-            }
-
-            override fun onFinish() {
-                if (rewardedInterstitialAd == null) {
-                    return
-                }
-
-                val rewardAmount = OVER_REWARD
-                val rewardType = rewardedInterstitialAd!!.rewardItem.type
-                introduceVideoAd(rewardAmount, rewardType)
-            }
-        }
-
-        countDownTimer?.start()
-    }
-
-    private fun introduceVideoAd(rewardAmount: Int, rewardType: String) {
-        val dialog = AdDialogFragment.newInstance(rewardAmount, rewardType)
-        dialog.setAdDialogInteractionListener(object :
-            AdDialogFragment.AdDialogInteractionListener {
-            override fun onShowAd() {
-                showRewardedVideo()
-            }
-
-            override fun onCancelAd() {
-            }
-        })
-        dialog.show(supportFragmentManager, "AdDialogFragment")
-    }
-
     private fun showRewardedVideo() {
-        if (rewardedInterstitialAd == null) {
+        val rewardedAd = rewardedInterstitialAd
+        if (rewardedAd == null) {
+            showRewardedAfterLoad = true
+            if (!isLoadingAds) {
+                initLoadRewardedInterstitialAd()
+            }
             return
         }
 
-        rewardedInterstitialAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
+        showRewardedAfterLoad = false
+        displayRewardedAd(rewardedAd)
+    }
+
+    private fun displayRewardedAd(ad: RewardedInterstitialAd) {
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 rewardedInterstitialAd = null
                 initLoadRewardedInterstitialAd()
@@ -255,7 +248,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        rewardedInterstitialAd?.show(
+        rewardedInterstitialAd = null
+
+        ad.show(
             this
         ) { _ ->
             addCoins(OVER_REWARD)
