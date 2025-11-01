@@ -5,7 +5,10 @@ import android.os.CountDownTimer
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.Button
+import androidx.compose.material.Card
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.aospstudio.sample.admob.ads.AdDialogFragment
 import com.aospstudio.sample.admob.ads.AdUnitId
+import com.aospstudio.sample.admob.ads.NativeAdCard
+import com.aospstudio.sample.admob.ads.NativeAdListItem
 import com.aospstudio.sample.admob.network.NetworkMonitorUtil
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.AdError
@@ -275,30 +280,51 @@ private fun MainScreen(
     onOpenRewardedInterstitial: () -> Unit,
     showBanner: Boolean
 ) {
-    Column(
+    val sampleItems = remember { List(12) { it + 1 } }
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(onClick = onOpenInterstitial) {
-            Text(text = stringResource(R.string.open_interstitial_ad))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onOpenRewardedInterstitial) {
-            Text(text = stringResource(R.string.open_rewarded_interstitial_ad))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.earned_count, earnedCoins),
-            style = MaterialTheme.typography.body1
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        if (showBanner) {
-            BannerAd(
-                modifier = Modifier
-                    .fillMaxWidth()
+        item {
+            AdActionSection(
+                earnedCoins = earnedCoins,
+                onOpenInterstitial = onOpenInterstitial,
+                onOpenRewardedInterstitial = onOpenRewardedInterstitial
             )
+        }
+        if (showBanner) {
+            item {
+                BannerAd(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+            }
+        }
+        item {
+            SectionTitle(text = stringResource(R.string.native_ad_card_title))
+        }
+        item {
+            NativeAdCard(
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            SectionTitle(text = stringResource(R.string.native_ad_list_title))
+        }
+        itemsIndexed(sampleItems) { index, item ->
+            Column(modifier = Modifier.fillMaxWidth()) {
+                SampleListItem(position = item)
+                if ((index + 1) % 4 == 0) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    NativeAdListItem(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }
@@ -329,4 +355,54 @@ private fun BannerAd(modifier: Modifier = Modifier) {
             }
         }
     )
+}
+
+@Composable
+private fun AdActionSection(
+    earnedCoins: Int,
+    onOpenInterstitial: () -> Unit,
+    onOpenRewardedInterstitial: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(onClick = onOpenInterstitial) {
+            Text(text = stringResource(R.string.open_interstitial_ad))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onOpenRewardedInterstitial) {
+            Text(text = stringResource(R.string.open_rewarded_interstitial_ad))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.earned_count, earnedCoins),
+            style = MaterialTheme.typography.body1
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.subtitle1,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+    )
+}
+
+@Composable
+private fun SampleListItem(position: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = 2.dp
+    ) {
+        Text(
+            text = stringResource(R.string.sample_list_title, position),
+            style = MaterialTheme.typography.body1,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
 }

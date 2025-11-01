@@ -6,4 +6,8 @@
     <string name="earned_count">Earned: %d</string>
     <string name="open_interstitial_ad">Open Interstitial Ad</string>
     <string name="open_rewarded_interstitial_ad">Open Rewarded Interstitial Ad</string>
+    <string name="native_ad_card_title">Native ad card (Compose)</string>
+    <string name="native_ad_list_title">List with inline ads</string>
+    <string name="native_ad_loading">Loading ad…</string>
+    <string name="sample_list_title">Sample item %1$d</string>
 </resources>
