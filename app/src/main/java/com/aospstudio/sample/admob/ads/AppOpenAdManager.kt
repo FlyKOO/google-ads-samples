@@ -62,16 +62,23 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
     fun showAdIfAvailable(
         activity: Activity,
         onShowAdCompleteListener: OnShowAdCompleteListener
-    ) {
-        appOpenAdManager?.showAdIfAvailable(activity, onShowAdCompleteListener)
+    ): Boolean {
+        return appOpenAdManager?.showAdIfAvailable(activity, onShowAdCompleteListener) ?: false
     }
 
-    fun loadAd(context: Context) {
-        appOpenAdManager?.loadAd(context)
+    fun loadAd(
+        context: Context,
+        onLoadAdCompleteListener: OnLoadAdCompleteListener? = null
+    ) {
+        appOpenAdManager?.loadAd(context, onLoadAdCompleteListener)
     }
 
     interface OnShowAdCompleteListener {
         fun onShowAdComplete()
+    }
+
+    interface OnLoadAdCompleteListener {
+        fun onLoadAdComplete(success: Boolean)
     }
 
     private inner class AppOpenAdController {
@@ -81,9 +88,20 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
         var isShowingAd = false
 
         private var loadTime: Long = 0
+        private val pendingLoadListeners = mutableListOf<OnLoadAdCompleteListener>()
 
-        fun loadAd(context: Context) {
-            if (isLoadingAd || isAdAvailable()) {
+        fun loadAd(
+            context: Context,
+            onLoadAdCompleteListener: OnLoadAdCompleteListener? = null
+        ) {
+            if (isAdAvailable()) {
+                onLoadAdCompleteListener?.onLoadAdComplete(true)
+                return
+            }
+
+            onLoadAdCompleteListener?.let { pendingLoadListeners.add(it) }
+
+            if (isLoadingAd) {
                 return
             }
 
@@ -99,12 +117,23 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
                         appOpenAd = ad
                         isLoadingAd = false
                         loadTime = Date().time
+                        notifyPendingLoadListeners(true)
                     }
 
                     override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                         isLoadingAd = false
+                        notifyPendingLoadListeners(false)
                     }
                 })
+        }
+
+        private fun notifyPendingLoadListeners(success: Boolean) {
+            if (pendingLoadListeners.isEmpty()) {
+                return
+            }
+            val listeners = pendingLoadListeners.toList()
+            pendingLoadListeners.clear()
+            listeners.forEach { it.onLoadAdComplete(success) }
         }
 
         private fun wasLoadTimeLessThanNHoursAgo(numHours: Long): Boolean {
@@ -117,27 +146,28 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
             return appOpenAd != null && wasLoadTimeLessThanNHoursAgo(4)
         }
 
-        fun showAdIfAvailable(activity: Activity) {
-            showAdIfAvailable(
+        fun showAdIfAvailable(activity: Activity): Boolean {
+            return showAdIfAvailable(
                 activity,
                 object : OnShowAdCompleteListener {
                     override fun onShowAdComplete() {
                     }
-                })
+                }
+            )
         }
 
         fun showAdIfAvailable(
             activity: Activity,
             onShowAdCompleteListener: OnShowAdCompleteListener
-        ) {
+        ): Boolean {
             if (isShowingAd) {
-                return
+                return true
             }
 
             if (!isAdAvailable()) {
                 onShowAdCompleteListener.onShowAdComplete()
                 loadAd(activity)
-                return
+                return false
             }
 
             appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
@@ -162,6 +192,7 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
             }
             isShowingAd = true
             appOpenAd!!.show(activity)
+            return true
         }
     }
 }
