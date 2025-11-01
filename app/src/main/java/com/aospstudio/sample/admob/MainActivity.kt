@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private var coinCount: Int = 0
     private var isLoadingAds = false
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
+    private var showRewardedAfterLoad = false
     private val coinCountState = mutableStateOf(0)
     private val isBannerVisible = mutableStateOf(false)
 
@@ -180,12 +181,17 @@ class MainActivity : AppCompatActivity() {
                         super.onAdFailedToLoad(adError)
                         isLoadingAds = false
                         rewardedInterstitialAd = null
+                        showRewardedAfterLoad = false
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedInterstitialAd) {
                         super.onAdLoaded(rewardedAd)
                         rewardedInterstitialAd = rewardedAd
                         isLoadingAds = false
+                        if (showRewardedAfterLoad) {
+                            showRewardedAfterLoad = false
+                            displayRewardedAd(rewardedAd)
+                        }
                     }
                 })
         }
@@ -197,14 +203,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRewardedVideo() {
-        if (rewardedInterstitialAd == null) {
+        val rewardedAd = rewardedInterstitialAd
+        if (rewardedAd == null) {
+            showRewardedAfterLoad = true
             if (!isLoadingAds) {
                 initLoadRewardedInterstitialAd()
             }
             return
         }
 
-        rewardedInterstitialAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
+        showRewardedAfterLoad = false
+        displayRewardedAd(rewardedAd)
+    }
+
+    private fun displayRewardedAd(ad: RewardedInterstitialAd) {
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 rewardedInterstitialAd = null
                 initLoadRewardedInterstitialAd()
@@ -218,7 +231,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        rewardedInterstitialAd?.show(
+        rewardedInterstitialAd = null
+
+        ad.show(
             this
         ) { _ ->
             addCoins(OVER_REWARD)
