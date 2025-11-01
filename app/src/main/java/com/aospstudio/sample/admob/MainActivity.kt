@@ -5,6 +5,9 @@ import android.os.CountDownTimer
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.Card
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -19,6 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.aospstudio.sample.admob.ads.AdDialogFragment
+import com.aospstudio.sample.admob.ads.NativeAdCard
+import com.aospstudio.sample.admob.ads.NativeAdListItem
 import com.aospstudio.sample.admob.ads.AdUnitId
 import com.aospstudio.sample.admob.network.NetworkMonitorUtil
 import com.google.ads.mediation.admob.AdMobAdapter
@@ -275,31 +280,115 @@ private fun MainScreen(
     onOpenRewardedInterstitial: () -> Unit,
     showBanner: Boolean
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val listItems = remember { List(20) { index -> index + 1 } }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        Button(onClick = onOpenInterstitial) {
-            Text(text = stringResource(R.string.open_interstitial_ad))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onOpenRewardedInterstitial) {
-            Text(text = stringResource(R.string.open_rewarded_interstitial_ad))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.earned_count, earnedCoins),
-            style = MaterialTheme.typography.body1
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        if (showBanner) {
-            BannerAd(
+        item {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(onClick = onOpenInterstitial) {
+                    Text(text = stringResource(R.string.open_interstitial_ad))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onOpenRewardedInterstitial) {
+                    Text(text = stringResource(R.string.open_rewarded_interstitial_ad))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.earned_count, earnedCoins),
+                    style = MaterialTheme.typography.body1
+                )
+            }
+        }
+
+        item {
+            SectionTitle(
+                title = stringResource(R.string.card_ad_title),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             )
         }
+
+        item {
+            NativeAdCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        item {
+            SectionTitle(
+                title = stringResource(R.string.list_section_title),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            )
+        }
+
+        itemsIndexed(listItems) { index, itemNumber ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                if (index != 0 && index % 4 == 0) {
+                    NativeAdListItem(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    )
+                }
+                DemoListItem(
+                    text = stringResource(R.string.list_item_title, itemNumber),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                )
+            }
+        }
+
+        item {
+            if (showBanner) {
+                Spacer(modifier = Modifier.height(16.dp))
+                BannerAd(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(title: String, modifier: Modifier = Modifier) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.h6,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun DemoListItem(text: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        elevation = 4.dp
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.body1,
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
 

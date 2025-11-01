@@ -6,4 +6,7 @@
     <string name="earned_count">Earned: %d</string>
     <string name="open_interstitial_ad">Open Interstitial Ad</string>
     <string name="open_rewarded_interstitial_ad">Open Rewarded Interstitial Ad</string>
+    <string name="card_ad_title">今日精选推荐</string>
+    <string name="list_section_title">猜你感兴趣</string>
+    <string name="list_item_title">推荐内容 %1$d</string>
 </resources>

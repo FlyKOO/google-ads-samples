@@ -29,6 +29,7 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         appOpenAdManager = AppOpenAdManager()
         registerActivityLifecycleCallbacks(this)
+        appOpenAdManager?.loadAd(this)
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
