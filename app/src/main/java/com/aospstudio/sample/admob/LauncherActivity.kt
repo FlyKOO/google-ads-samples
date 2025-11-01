@@ -8,7 +8,7 @@ import com.aospstudio.sample.admob.ads.AppOpenAdManager
 class LauncherActivity : AppCompatActivity() {
 
     private var hasNavigatedToMain = false
-    private var shouldShowAdWhenResumed = false
+    private var isAdReadyToShow = false
     private var appOpenAdManager: AppOpenAdManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,30 +28,34 @@ class LauncherActivity : AppCompatActivity() {
                         startMainActivity()
                         return
                     }
+                    isAdReadyToShow = true
                     attemptToShowAd()
                 }
             }
         )
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (shouldShowAdWhenResumed && !hasNavigatedToMain && !isFinishing && !isDestroyed) {
-            shouldShowAdWhenResumed = false
-            attemptToShowAd()
-        }
+    override fun onPostResume() {
+        super.onPostResume()
+        attemptToShowAd()
     }
 
     private fun attemptToShowAd() {
+        if (!isAdReadyToShow || hasNavigatedToMain || isFinishing || isDestroyed) {
+            return
+        }
+
         val application = appOpenAdManager
         if (application == null) {
             startMainActivity()
             return
         }
+
         if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
-            shouldShowAdWhenResumed = true
             return
         }
+
+        isAdReadyToShow = false
         val didShowAd = application.showAdIfAvailable(
             this,
             object : AppOpenAdManager.OnShowAdCompleteListener {
