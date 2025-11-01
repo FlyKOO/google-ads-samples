@@ -8,11 +8,14 @@ import com.aospstudio.sample.admob.ads.AppOpenAdManager
 class LauncherActivity : AppCompatActivity() {
 
     private var hasNavigatedToMain = false
+    private var shouldShowAdWhenResumed = false
+    private var appOpenAdManager: AppOpenAdManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_launcher)
-        val application = application as? AppOpenAdManager
+        appOpenAdManager = application as? AppOpenAdManager
+        val application = appOpenAdManager
         if (application == null) {
             startMainActivity()
             return
@@ -25,20 +28,41 @@ class LauncherActivity : AppCompatActivity() {
                         startMainActivity()
                         return
                     }
-                    val didShowAd = application.showAdIfAvailable(
-                        this@LauncherActivity,
-                        object : AppOpenAdManager.OnShowAdCompleteListener {
-                            override fun onShowAdComplete() {
-                                startMainActivity()
-                            }
-                        }
-                    )
-                    if (!didShowAd) {
-                        startMainActivity()
-                    }
+                    attemptToShowAd()
                 }
             }
         )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (shouldShowAdWhenResumed && !hasNavigatedToMain && !isFinishing && !isDestroyed) {
+            shouldShowAdWhenResumed = false
+            attemptToShowAd()
+        }
+    }
+
+    private fun attemptToShowAd() {
+        val application = appOpenAdManager
+        if (application == null) {
+            startMainActivity()
+            return
+        }
+        if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+            shouldShowAdWhenResumed = true
+            return
+        }
+        val didShowAd = application.showAdIfAvailable(
+            this,
+            object : AppOpenAdManager.OnShowAdCompleteListener {
+                override fun onShowAdComplete() {
+                    startMainActivity()
+                }
+            }
+        )
+        if (!didShowAd) {
+            startMainActivity()
+        }
     }
 
     private fun startMainActivity() {
