@@ -146,8 +146,10 @@ private fun populateNativeAdView(nativeAd: NativeAd, adView: NativeAdView) {
     headlineView?.text = nativeAd.headline
 
     adView.mediaView = mediaView
-    mediaView?.mediaContent = nativeAd.mediaContent
-    mediaView?.setImageScaleType(ImageView.ScaleType.CENTER_CROP)
+    if (mediaView != null) {
+        mediaView.setMediaContent(nativeAd.mediaContent)
+        mediaView.setImageScaleType(ImageView.ScaleType.CENTER_CROP)
+    }
 
     adView.bodyView = bodyView
     setTextOrHide(bodyView, nativeAd.body)
