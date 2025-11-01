@@ -1,7 +1,6 @@
 package com.aospstudio.sample.admob
 
 import android.os.Bundle
-import android.os.CountDownTimer
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.aospstudio.sample.admob.ads.AdDialogFragment
 import com.aospstudio.sample.admob.ads.AdUnitId
 import com.aospstudio.sample.admob.ads.NativeAdCard
 import com.aospstudio.sample.admob.ads.NativeAdListItem
@@ -43,7 +41,6 @@ import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 
-private const val COUNTER_TIME = 0L
 private const val OVER_REWARD = 1
 
 class MainActivity : AppCompatActivity() {
@@ -54,7 +51,6 @@ class MainActivity : AppCompatActivity() {
     private var mAdIsLoading: Boolean = false
     private var interstitialAd: InterstitialAd? = null
     private var coinCount: Int = 0
-    private var countDownTimer: CountDownTimer? = null
     private var isLoadingAds = false
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
     private val coinCountState = mutableStateOf(0)
@@ -70,7 +66,7 @@ class MainActivity : AppCompatActivity() {
                 MainScreen(
                     earnedCoins = coinCountState.value,
                     onOpenInterstitial = { initLoadInterstitial() },
-                    onOpenRewardedInterstitial = { createTimer(COUNTER_TIME) },
+                    onOpenRewardedInterstitial = { showRewardedVideo() },
                     showBanner = isBannerVisible.value
                 )
             }
@@ -184,7 +180,6 @@ class MainActivity : AppCompatActivity() {
                         super.onAdFailedToLoad(adError)
                         isLoadingAds = false
                         rewardedInterstitialAd = null
-                        createTimer(COUNTER_TIME)
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedInterstitialAd) {
@@ -201,43 +196,11 @@ class MainActivity : AppCompatActivity() {
         coinCountState.value = coinCount
     }
 
-    private fun createTimer(time: Long) {
-        countDownTimer?.cancel()
-
-        countDownTimer = object : CountDownTimer(time * 1000, 50) {
-            override fun onTick(millisUnitFinished: Long) {
-            }
-
-            override fun onFinish() {
-                if (rewardedInterstitialAd == null) {
-                    return
-                }
-
-                val rewardAmount = OVER_REWARD
-                val rewardType = rewardedInterstitialAd!!.rewardItem.type
-                introduceVideoAd(rewardAmount, rewardType)
-            }
-        }
-
-        countDownTimer?.start()
-    }
-
-    private fun introduceVideoAd(rewardAmount: Int, rewardType: String) {
-        val dialog = AdDialogFragment.newInstance(rewardAmount, rewardType)
-        dialog.setAdDialogInteractionListener(object :
-            AdDialogFragment.AdDialogInteractionListener {
-            override fun onShowAd() {
-                showRewardedVideo()
-            }
-
-            override fun onCancelAd() {
-            }
-        })
-        dialog.show(supportFragmentManager, "AdDialogFragment")
-    }
-
     private fun showRewardedVideo() {
         if (rewardedInterstitialAd == null) {
+            if (!isLoadingAds) {
+                initLoadRewardedInterstitialAd()
+            }
             return
         }
 
