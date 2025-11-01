@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private var isLoadingAds = false
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
     private var showRewardedAfterLoad = false
+    private var showInterstitialAfterLoad = false
     private val coinCountState = mutableStateOf(0)
     private val isBannerVisible = mutableStateOf(false)
 
@@ -129,35 +130,31 @@ class MainActivity : AppCompatActivity() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     interstitialAd = null
                     mAdIsLoading = false
+                    showInterstitialAfterLoad = false
                 }
 
                 override fun onAdLoaded(mInterstitialAd: InterstitialAd) {
                     interstitialAd = mInterstitialAd
                     mAdIsLoading = false
+                    if (showInterstitialAfterLoad) {
+                        showInterstitialAfterLoad = false
+                        displayInterstitialAd(mInterstitialAd)
+                    }
                 }
             }
         )
     }
 
     private fun initLoadInterstitial() {
-        if (interstitialAd != null) {
-            interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
-                override fun onAdDismissedFullScreenContent() {
-                    interstitialAd = null
-                    initInterstitial()
-                }
-
-                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                    interstitialAd = null
-                }
-
-                override fun onAdShowedFullScreenContent() {
-                }
-            }
-            interstitialAd?.show(this)
-        } else {
-            initStartApp()
+        val ad = interstitialAd
+        if (ad != null) {
+            showInterstitialAfterLoad = false
+            displayInterstitialAd(ad)
+            return
         }
+
+        showInterstitialAfterLoad = true
+        initStartApp()
     }
 
     private fun initStartApp() {
@@ -165,6 +162,26 @@ class MainActivity : AppCompatActivity() {
             mAdIsLoading = true
             initInterstitial()
         }
+    }
+
+    private fun displayInterstitialAd(ad: InterstitialAd) {
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+            override fun onAdDismissedFullScreenContent() {
+                interstitialAd = null
+                initStartApp()
+            }
+
+            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                interstitialAd = null
+                initStartApp()
+            }
+
+            override fun onAdShowedFullScreenContent() {
+            }
+        }
+
+        interstitialAd = null
+        ad.show(this)
     }
 
     private fun initLoadRewardedInterstitialAd() {
