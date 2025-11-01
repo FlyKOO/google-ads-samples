@@ -14,6 +14,7 @@ class LauncherActivity : AppCompatActivity() {
             startMainActivity()
             return
         }
+        application.loadAd(this)
         application.showAdIfAvailable(
             this@LauncherActivity,
             object : AppOpenAdManager.OnShowAdCompleteListener {

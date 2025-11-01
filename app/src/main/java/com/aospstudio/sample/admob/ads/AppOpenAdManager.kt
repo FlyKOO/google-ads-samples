@@ -20,14 +20,15 @@ import java.util.Date
 open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallbacks,
     LifecycleObserver {
 
-    private var appOpenAdManager: AppOpenAdManager? = null
+    private var appOpenAdManager: AppOpenAdController? = null
     private var currentActivity: Activity? = null
 
     override fun onCreate() {
         super.onCreate()
         MobileAds.initialize(this) {}
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        appOpenAdManager = AppOpenAdManager()
+        appOpenAdManager = AppOpenAdController()
+        appOpenAdManager?.loadAd(this)
         registerActivityLifecycleCallbacks(this)
     }
 
@@ -38,10 +39,12 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
         }
     }
 
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        appOpenAdManager?.loadAd(activity)
+    }
 
     override fun onActivityStarted(activity: Activity) {
-        if (!appOpenAdManager!!.isShowingAd) {
+        if (appOpenAdManager?.isShowingAd != true) {
             currentActivity = activity
         }
     }
@@ -63,11 +66,15 @@ open class AppOpenAdManager : Application(), Application.ActivityLifecycleCallba
         appOpenAdManager?.showAdIfAvailable(activity, onShowAdCompleteListener)
     }
 
+    fun loadAd(context: Context) {
+        appOpenAdManager?.loadAd(context)
+    }
+
     interface OnShowAdCompleteListener {
         fun onShowAdComplete()
     }
 
-    private inner class AppOpenAdManager {
+    private inner class AppOpenAdController {
 
         private var appOpenAd: AppOpenAd? = null
         private var isLoadingAd = false
